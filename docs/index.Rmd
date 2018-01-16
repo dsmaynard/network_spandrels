@@ -1,0 +1,155 @@
+---
+title: "Network spandrels reflect ecological assembly"
+
+output: html_document
+---
+
+
+*Daniel S. Maynard, Carlos A. Serván, Stefano Allesina (2018) Ecology Letters, doi: 10.1111/ele.12912*
+
+
+
+The corresponding R files include `assembly_functions.R`, which contains the core functions for building communities; and `launch_assembly.R`, which contains various examples. These can be downloaded from https://github.com/dsmaynard/network_spandrels.
+
+# Assembling communities
+
+The code requires the following **R** packages: 
+
+* `deSolve` for integrating dynamics
+* `igraph` for calculating network metrics
+* `tidyverse` for manipulating data
+* `RMTstat` for the Marchenko-Pastur distribution
+* `gridExtra` (optional) for plotting multiple plots in ggplot
+
+Once the packages are installed, the next step is to source the main R file containing the assembly functions:
+
+```{r echo=F, message=F}
+source("../assembly_functions.R")
+```
+
+```{r eval=F}
+source("assembly_functions.R")
+```
+
+At this point, there are seven assembly scenarios to choose from:
+
+1. Immigration, no traits (scenario = `notraits_immigration_search`)
+2. Radiation, no traits  (scenario = `notraits_radiation_search`)
+3. Immigration, no traits, uniform search (scenario = `notraits_immigration_uniform`)
+4. Immigration, binary traits (scenario = `traits_binary_immigration`)
+5. Immigration, continuous traits (scenario = `traits_continuous_immigration`)
+6. Radiation, binary traits (scenario = `traits_binary_radiation`)
+7. Radiation, continuous traits (scenario = `traits_continuous_radiation`)
+
+
+To call one of these scenarios, use the `assemble_community` function. The program will run until the number of unique species in the community reaches `target_size`. Here, we are using a niche-overlap traits model with binary traits, and species are joining via immigration. We specify a total of 100 traits (default `ntraits=200`), with each species being assigned 30% of the traits (default `bin.prob=0.50`). 
+
+```{r message=F}
+outcom<-assemble_community(target_size=50,scenario="traits_binary_immigration",ntraits=100,bin.prob=.3)
+```
+In the radiation scenarios, we can also specify the mutation rate (default `mutation.rate=0.03`):
+
+```{r eval=F}
+outcom<-assemble_community(50,scenario="traits_binary_radiation",ntraits=100,bin.prob=.3,mutation.rate=0.05)
+```
+(In the above, we also suppress the printing of the assembly status with `show_prog=F`.)
+
+Changed to the default threshold for survival (default `THRESH=1e-6`) and the initial abundance of the invader (default `INITIAL=1e-5`) can be passed to any assembly scenario: 
+
+```{r message=F}
+outcom<-assemble_community(50,scenario="notraits_immigration_search",INITIAL=1e-3,THRESH=1e-8,show_prog=F)
+```
+Currently, all growth rates are set equal to `r=1` by default, and the intraspecific interaction coefficients are all set equal to `a_ii=-1`. These defaults can be changed in the assemble_community function call, but doing so has not been fully tested -- so experiment at your own risk!
+
+# Plotting assembly trends
+
+By default, the full history is returned (`full_history=T`), which enables plotting of the "mean field" assembly trends over time:
+
+
+```{r message=F}
+p1<-ggplot(outcom$history,aes(x=t,y=n))+geom_line() 
+p2<-ggplot(outcom$history,aes(x=t,y=tot_abundance))+geom_line()
+p3<-ggplot(outcom$history,aes(x=t,y=mean_abundance))+geom_line()
+p4<-ggplot(outcom$history,aes(x=t,y=mean_interaction))+geom_line()
+p5<-ggplot(outcom$history,aes(x=t,y=var_interaction))+geom_line()   
+  
+#plot
+grid.arrange(p1,p2,p3,p4,p5,nrow=2,ncol=3)
+
+```
+
+# Plotting the observed and expected spectra
+
+For any scenario, the observed and expected spectra (eigenvalue distribution) can be plotted by using the `compare_spectra` function, which will plot the observed histogram and the expected histogram. In the no-traits scenarios, the expected histogram is given by the  semicircle law:
+
+```{r message=F}
+outcom<-assemble_community(50,scenario="notraits_immigration_search",show_prog=F)
+compare_spectra(outcom)
+```
+
+And in the traits scenarios, the null distribution of the scaled covariance matrix is given by the Marchenko-Pastur distribution:
+
+```{r message=F}
+outcom<-assemble_community(50,scenario="traits_binary_immigration",show_prog=F)
+compare_spectra(outcom)
+```
+
+
+# Calculating network metrics 
+
+The interaction matrix can be discretized into a binary 1-0 matrix for calculating network metrics. Here, the strongest 10% of the interactions are set equal to 1, and the weakest 90% of the interactions are set equal to zero:
+
+```{r message=F}
+Abin<-binarize_A(outcom,cutval=0.9)
+```
+At which point, the values of nestedness, modularity, or motif counts can be calculated on the binary matrix:
+
+```{r message=F}
+motifs_func(Abin)
+nestedness_func(Abin)
+modularity_func(Abin)
+
+```
+
+# Creating a custom assembly scenario
+
+The `assemble_community` function is quite general. If you want to include your own assembly scenario, you need to create a function that takes as its arguments:
+
+* x (the current species abundance vector) 
+* A (the current species interaction matrix)
+* P (the current trait matrix, with rows as traits and columns as species. Must default to NULL in the no traits case)
+
+Any additional scenario-specific arguments (e.g., `my_param1` and `my_param2` in the example below) can be passed to the function through the `...` argument in assemble_communities. Importantly, if the scenario includes a trait matrix P, then this custom assembly function must also initialize the P matrix for the first species. The function must then return a list of A and P, with P=NULL if no traits. The general outline of this function typically would follow something like this, though there is no reason why it cannot include more creative scenarios (e.g., complex trait evolution models):
+
+```
+ custom_assembly_scenario<-function(x,A,P,my_param1,my_param2,...){
+
+       [code for initializing the P matrix for the first species (if using a trait model]
+       
+       [code for generating a new set of interaction coefficients OR a new set of trait values]
+       
+       [code for translating trait values into interaction coefficients (if using a trait model)]
+
+       [code for testing the desired invasion criterion]
+       
+       [repeat until a successful invader is found]
+       
+       return(list(A=newA, P=newP))
+ 
+ }
+```
+
+This function can then be directly called in the `assemble_community` function:
+
+
+```{r eval=F}
+outcom<-assemble_community(50,scenario="custom_assembly_scenario",my_param1=.5, my_param2=6)
+```
+As noted, the growth rates and intraspecific effects are, by default, set equal to 1 and -1, respectively. This assumption certainly can be modified in a custom function, but doing so will require some revising of the other functions so as to deal with more flexible scenarios. 
+
+
+For a custom non-traits scenario, the assembly function will generally need to include a subroutine for generating new interaction coefficients, e.g., by selecting these at random from some distribution, or by permuting an existing species' values in some way (see `notraits_immigration_search` and `notraits_radiation_search` for examples). In a traits scenario, the assembly function typically has two subroutines: (1) a function to generate new traits (see `new_binary` and `new_continuous` for examples), and (2) a distance function that translates this new trait vector into a vector of interaction coefficients (see `get_A_from_P_binary` and `get_A_from_P_continuous` for examples). 
+
+
+
+**If you have any questions or if you find a bug in the code, please email Dan Maynard: dmaynard at uchicago.edu; or Stefano Allesina: sallesina at uchicago.edu**
