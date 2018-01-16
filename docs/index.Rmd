@@ -33,14 +33,13 @@ source("assembly_functions.R")
 
 At this point, there are seven assembly scenarios to choose from:
 
-1. Immigration, no traits (scenario = `notraits_immigration_search`)
-2. Radiation, no traits  (scenario = `notraits_radiation_search`)
-3. Immigration, no traits, uniform search (scenario = `notraits_immigration_uniform`)
-4. Immigration, binary traits (scenario = `traits_binary_immigration`)
-5. Immigration, continuous traits (scenario = `traits_continuous_immigration`)
-6. Radiation, binary traits (scenario = `traits_binary_radiation`)
-7. Radiation, continuous traits (scenario = `traits_continuous_radiation`)
-
+1. `notraits_immigration_search` (immigration, no traits)
+2. `notraits_immigration_uniform` (immigration, no traits, uniform search)
+3. `notraits_radiation_search` (radiation, no traits)
+4. `traits_binary_immigration` (immigration, binary traits)
+5. `traits_binary_radiation` (radiation, binary traits)
+6. `traits_continuous_immigration` (immigration, continuous traits)
+7. `traits_continuous_radiation` (radiation, continuous traits)
 
 To call one of these scenarios, use the `assemble_community` function. The program will run until the number of unique species in the community reaches `target_size`. Here, we are using a niche-overlap traits model with binary traits, and species are joining via immigration. We specify a total of 100 traits (default `ntraits=200`), with each species being assigned 30% of the traits (default `bin.prob=0.50`). 
 
@@ -50,7 +49,7 @@ outcom<-assemble_community(target_size=50,scenario="traits_binary_immigration",n
 In the radiation scenarios, we can also specify the mutation rate (default `mutation.rate=0.03`):
 
 ```{r eval=F}
-outcom<-assemble_community(50,scenario="traits_binary_radiation",ntraits=100,bin.prob=.3,mutation.rate=0.05)
+outcom<-assemble_community(50,scenario="traits_binary_radiation",ntraits=100,bin.prob=0.3,mutation.rate=0.05)
 ```
 (In the above, we also suppress the printing of the assembly status with `show_prog=F`.)
 
@@ -115,23 +114,25 @@ modularity_func(Abin)
 
 The `assemble_community` function is quite general. If you want to include your own assembly scenario, you need to create a function that takes as its arguments:
 
-* x (the current species abundance vector) 
-* A (the current species interaction matrix)
-* P (the current trait matrix, with rows as traits and columns as species. Must default to NULL in the no traits case)
+* `x` -- The current species abundance vector.
+* `r` -- A numeric value denoting the growth rate, as passed down from `assemble_communities`. Note that the current code assumes that growth rate is constant and identical for all species.
+* `A `-- The current species interaction matrix.
 
-Any additional scenario-specific arguments (e.g., `my_param1` and `my_param2` in the example below) can be passed to the function through the `...` argument in assemble_communities. Importantly, if the scenario includes a trait matrix P, then this custom assembly function must also initialize the P matrix for the first species. The function must then return a list of A and P, with P=NULL if no traits. The general outline of this function typically would follow something like this, though there is no reason why it cannot include more creative scenarios (e.g., complex trait evolution models):
+And optionally, if doing a trait-based model
+
+* `P` -- The current trait matrix, with rows as traits and columns as species.
+
+ Any additional scenario-specific arguments (e.g., `my_param1` and `my_param2` in the example below) can be passed to the function through the `...` argument in `assemble_communities`. Importantly, if the scenario includes a trait matrix P, then this custom assembly function must also initialize the P matrix for the first species. 
+
+The function must then return a list of A and P, with `P=NULL` if no traits are included. The general outline of this function typically would follow something like this, though there is no reason why it cannot include more creative scenarios (e.g., complex trait evolution models):
 
 ```
- custom_assembly_scenario<-function(x,A,P,my_param1,my_param2,...){
-
-       [code for initializing the P matrix for the first species (if using a trait model]
-       
+ custom_assembly_scenario<-function(x,r,A,P=NULL,my_param1,my_param2,...){
+ 
+       [code for initializing the P matrix for the first species (if using a trait model)]
        [code for generating a new set of interaction coefficients OR a new set of trait values]
-       
        [code for translating trait values into interaction coefficients (if using a trait model)]
-
        [code for testing the desired invasion criterion]
-       
        [repeat until a successful invader is found]
        
        return(list(A=newA, P=newP))
@@ -143,7 +144,7 @@ This function can then be directly called in the `assemble_community` function:
 
 
 ```{r eval=F}
-outcom<-assemble_community(50,scenario="custom_assembly_scenario",my_param1=.5, my_param2=6)
+outcom<-assemble_community(50,scenario="custom_assembly_scenario",my_param1=0.5, my_param2=6)
 ```
 As noted, the growth rates and intraspecific effects are, by default, set equal to 1 and -1, respectively. This assumption certainly can be modified in a custom function, but doing so will require some revising of the other functions so as to deal with more flexible scenarios. 
 
