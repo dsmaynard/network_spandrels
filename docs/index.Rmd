@@ -9,7 +9,7 @@ output: html_document
 
 
 
-The corresponding R files include `assembly_functions.R`, which contains the core functions for building communities; and `launch_assembly.R`, which contains various examples. These can be downloaded from https://github.com/dsmaynard/network_spandrels.
+The corresponding R files include `assembly_functions.R`, which contains the core functions for building communities; and `launch_assembly.R`, which contains various examples. These can be downloaded from the `R_code` folder at https://github.com/dsmaynard/network_spandrels.
 
 # Assembling communities
 
