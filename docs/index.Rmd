@@ -24,7 +24,7 @@ The code requires the following **R** packages:
 Once the packages are installed, the next step is to source the main R file containing the assembly functions:
 
 ```{r echo=F, message=F}
-source("../assembly_functions.R")
+source("../R_code/assembly_functions.R")
 ```
 
 ```{r eval=F}
