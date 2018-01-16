@@ -44,16 +44,16 @@ At this point, there are seven assembly scenarios to choose from:
 To call one of these scenarios, use the `assemble_community` function. The program will run until the number of unique species in the community reaches `target_size`. Here, we are using a niche-overlap traits model with binary traits, and species are joining via immigration. We specify a total of 100 traits (default `ntraits=200`), with each species being assigned 30% of the traits (default `bin.prob=0.50`). 
 
 ```{r message=F}
-outcom<-assemble_community(target_size=50,scenario="traits_binary_immigration",ntraits=100,bin.prob=.3)
+outcom<-assemble_community(target_size=50,scenario="traits_binary_immigration",ntraits=100,bin.prob=0.3)
 ```
 In the radiation scenarios, we can also specify the mutation rate (default `mutation.rate=0.03`):
 
 ```{r eval=F}
-outcom<-assemble_community(50,scenario="traits_binary_radiation",ntraits=100,bin.prob=0.3,mutation.rate=0.05)
+outcom<-assemble_community(50,scenario="traits_binary_radiation",mutation.rate=0.05,show.prog=F)
 ```
 (In the above, we also suppress the printing of the assembly status with `show_prog=F`.)
 
-Changed to the default threshold for survival (default `THRESH=1e-6`) and the initial abundance of the invader (default `INITIAL=1e-5`) can be passed to any assembly scenario: 
+Changes to the default threshold for survival (default `THRESH=1e-6`) or the initial abundance of the invader (default `INITIAL=1e-5`) can be passed to any assembly scenario: 
 
 ```{r message=F}
 outcom<-assemble_community(50,scenario="notraits_immigration_search",INITIAL=1e-3,THRESH=1e-8,show_prog=F)
@@ -146,10 +146,9 @@ This function can then be directly called in the `assemble_community` function:
 ```{r eval=F}
 outcom<-assemble_community(50,scenario="custom_assembly_scenario",my_param1=0.5, my_param2=6)
 ```
-As noted, the growth rates and intraspecific effects are, by default, set equal to 1 and -1, respectively. This assumption certainly can be modified in a custom function, but doing so will require some revising of the other functions so as to deal with more flexible scenarios. 
-
-
 For a custom non-traits scenario, the assembly function will generally need to include a subroutine for generating new interaction coefficients, e.g., by selecting these at random from some distribution, or by permuting an existing species' values in some way (see `notraits_immigration_search` and `notraits_radiation_search` for examples). In a traits scenario, the assembly function typically has two subroutines: (1) a function to generate new traits (see `new_binary` and `new_continuous` for examples), and (2) a distance function that translates this new trait vector into a vector of interaction coefficients (see `get_A_from_P_binary` and `get_A_from_P_continuous` for examples). 
+
+As noted, the growth rates and intraspecific effects are, by default, set equal to 1 and -1, respectively. This assumption certainly can be modified in a custom function, but doing so will require some revising of the other functions so as to deal with more flexible scenarios. 
 
 
 
